@@ -1,17 +1,21 @@
 #include <stdio.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "dictionary.h"
+#define DICTIONARY "dictionaries/dict.txt"
 
 int main(int argc, char *argv[])
 {
-  if (argc != 3)
+  clock_t tic = clock();
+
+  if (argc != 2)
   {
-    printf("usage: [./spellcheck] [dict.txt] <text>\n");
+    printf("usage: [./spellcheck] <text>\n");
     return 1;
   }
   // Open text
-  char *text = argv[2];
+  char *text = argv[1];
   FILE *text_p = fopen(text, "r");
   if (text_p == NULL)
   {
@@ -20,7 +24,7 @@ int main(int argc, char *argv[])
   }
 
   // Open and load dictionary into memory
-  const char *dict_p = argv[1];
+  const char *dict_p = DICTIONARY;
   bool loaded = load(dict_p);
   if (!loaded)
   {
@@ -93,8 +97,12 @@ int main(int argc, char *argv[])
   }
   fclose(text_p);
 
+  clock_t toc = clock();
+  double elapsed_time = (double)(toc - tic) / CLOCKS_PER_SEC;
+
   fprintf(miss_p, "Misspelled words = %i\n", misspelled);
   fprintf(miss_p, "Words in dictionary = %i\n", size());
+  fprintf(miss_p, "Elapsed time = %.5f seconds\n", elapsed_time);
   fclose(miss_p);
 
   bool unloaded = unload();
@@ -103,6 +111,8 @@ int main(int argc, char *argv[])
     printf("Failed to unload, aborting ...\n");
     return 1;
   }
+
+  printf("Elapsed time = %.5f seconds\n", elapsed_time);
 
   return 0;
 
