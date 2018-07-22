@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     }
     else if (word_index > 0)
     {
-      // We have nound a whole word, write a escape char to the end of word
+      // We have found a whole word, write a escape char to the end of word
       word[word_index] = '\0';
       checked_word = check(word);
       ++words_in_text;

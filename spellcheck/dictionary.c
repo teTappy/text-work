@@ -6,9 +6,10 @@
 
 #include "dictionary.h"
 
-node *hashtable[26] = {NULL};
+
 unsigned int word_count = 0;
 bool is_loaded = false;
+node *root;
 
 bool load(const char *dictionary)
 {
@@ -19,41 +20,48 @@ bool load(const char *dictionary)
   }
 
   char current_word[LENGTH + 1];
-  int index = 0;
+
+  // Create root node
+  root = create_new_node();
+  if (root == NULL)
+  {
+    free(root);
+    return false;
+  }
+
+  node *trav = root;
+  int branch_index;
 
   while (fscanf(dict_p, "%s", current_word) != EOF)
   {
-    node *n = malloc(sizeof(node));
-    if (n == NULL)
+    for (int i = 0, len = strlen(current_word); i < len; i++)
     {
-      unload();
-      return false;
-    }
-    strcpy(n->word, current_word);
+      // Find branch index : a = 0, b = 1 .... ' = 26
+      branch_index = find_branch_index(current_word[i]);
+      if (branch_index == -1)
+      {
+        printf("something went wrong finding the branch index within _load_\n");
+        unload();
+        return false;
+      }
 
-    if (isupper(current_word[0]))
-      current_word[0] = tolower(current_word[0]);
+      if (trav->next[branch_index] == NULL)
+      {
+        trav->next[branch_index] = create_new_node();
 
-    index = current_word[0] - 'a';
-    if (index < 0 || index > 25)
-    {
-      printf("Hashing went wrong\n");
-      unload();
-      return false;
-    }
-
-    if (hashtable[index] != NULL)
+        if (trav->next[branch_index] == NULL)
         {
-            n->next = hashtable[index];
-            hashtable[index] = n;
+          unload();
+          return false;
         }
-        else
-        {
-            hashtable[index] = n;
-            n->next = NULL;
-        }
-        ++word_count;
+      }
+      trav = trav->next[branch_index];
+    }
+    trav->is_word = true;
+    trav = root;
+    ++word_count;
   }
+
   is_loaded = true;
   fclose(dict_p);
   return true;
@@ -61,25 +69,27 @@ bool load(const char *dictionary)
 
 bool check(char *word)
 {
-  for (int i = 0, l = strlen(word); i < l; i++)
+  node *trav = root;
+  int branch_index;
+
+  for (int i = 0, n = strlen(word); i < n; i++)
   {
-    if (isupper(word[i]) && isalpha(word[i]))
+    branch_index = find_branch_index(word[i]);
+    if (branch_index == -1)
     {
-      word[i] = tolower(word[i]);
+      printf("something went wrong finding the branch index within _check_\n");
+      return false;
     }
-  }
-  int index = word[0] - 'a';
 
-  // Cycle through hashtable starting from the index
-  node *ls_ptr = hashtable[index];
-  while (ls_ptr != NULL)
-  {
-    if (strcmp(ls_ptr->word, word) == 0)
-      return true;
-
-    ls_ptr = ls_ptr->next;
+    if (trav->next[branch_index] == NULL)
+      return false;
+    trav = trav->next[branch_index];
   }
-  return false;
+
+  if (trav->is_word)
+    return true;
+  else
+    return false;
 }
 
 unsigned int size(void)
@@ -92,21 +102,50 @@ unsigned int size(void)
 
 bool unload(void)
 {
-  node *ls_ptr = NULL;
-  node *tmp = NULL;
+  free_node(root);
+  return true;
+}
 
-  for (int i = 0; i < 26; i++)
+node *create_new_node(void)
+{
+  node *new = malloc(sizeof(node));
+
+  // Assign all pointers to NULL
+  for (int i = 0; i < 27; i++)
+    new->next[i] = NULL;
+
+  return new;
+}
+
+int find_branch_index(char c)
+{
+
+  if (c == '\'')
   {
-    ls_ptr = hashtable[i];
+    return 26;
+  }
+  else if (isalpha(c))
+  {
+    if (isupper(c))
+      c = tolower(c);
 
-    while (ls_ptr != NULL)
+    return c - 'a';
+  }
+  else
+  {
+    return -1;
+  }
+}
+
+void free_node(node *n)
+{
+  for (int i = 0; i < 27; i++)
+  {
+    if (n->next[i] != NULL)
     {
-      tmp = ls_ptr;
-      ls_ptr = ls_ptr->next;
-
-      free(tmp);
+      free_node(n->next[i]);
     }
   }
-  free(ls_ptr);
-  return true;
+  free(n);
+  return;
 }
